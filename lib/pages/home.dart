@@ -1,96 +1,110 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:dynamic_theme/dynamic_theme.dart';
+import 'package:dynamic_theme/theme_switcher_widgets.dart';
 import 'package:flutter/material.dart';
-import 'package:flutterfire_auth/utils/auth.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutterfire_auth/utils/constants.dart';
 
-class HomePage extends StatelessWidget {
-  HomePage({this.auth, this.onSignOut});
-  final BaseAuth auth;
-  final VoidCallback onSignOut;
+import '../utils/auth.dart';
+import '../utils/static.dart';
+import 'login_page.dart';
+
+class HomePage extends StatefulWidget {
+  HomePage({this.auth, this.snackBarInfo});
+  final Auth auth;
+  final SnackBarInfo snackBarInfo;
+
+  @override
+  _HomePage createState() => new _HomePage();
+}
+
+class _HomePage extends State<HomePage> {
+  BuildContext _context;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback(
+        (_) => Static.showSnackbar(_context, widget.snackBarInfo));
+  }
 
   @override
   Widget build(BuildContext context) {
-    void _signOut() async {
-      try {
-        await auth.signOut();
-        onSignOut();
-      } catch (e) {
-        print(e);
-      }
-    }
-
     return new Scaffold(
         appBar: new AppBar(
+          title: new Text('App Name'),
           actions: <Widget>[
-            new FlatButton(
-                onPressed: _signOut,
-                child: new Text('Logout',
-                    style: new TextStyle(fontSize: 17.0, color: Colors.white)))
+            new PopupMenuButton<String>(
+              onSelected: _choiceAction,
+              itemBuilder: (BuildContext context) {
+                return Constants.choices.map((String choice) {
+                  return PopupMenuItem<String>(
+                      value: choice, child: Text(choice));
+                }).toList();
+              },
+            )
           ],
         ),
-        body: new FutureBuilder(
-          future: _getStream(),
-          builder: (BuildContext context, AsyncSnapshot<String>userSnapshot){
-            if (userSnapshot.connectionState != ConnectionState.done) return new Center(child: new Container(child:CircularProgressIndicator()));
-          return new Center(child: new Container(child:Text(userSnapshot.data.toString(), style: TextStyle(fontSize: 40))));
-          // return new StreamBuilder(
-          //   stream: _getStream(),      //Firestore.instance.collection('users').document(Firestore.instance.document(userSnapshot.data.toString())),
-          //   builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot){
-          //     if (!snapshot.hasData) return new Center(child: new Container(child:CircularProgressIndicator()));
-          //     return new Center(child: new Container(child:new Text(
-          //       snapshot.data.documents[0]['email'], 
-          //     style: new TextStyle(fontSize: 50))));
-          //   }
-          // );
-        
-          }
-        )
-        );
+        body: new Builder(builder: (BuildContext context) {
+          _context = context;
+        return new Center(child: Text("Hello"));
+        }));
   }
 
-  
+//Possibly going to move _choiceAction and _signOut and new PopupMenu to the static class
+  void _choiceAction(String choice) {
+    if (choice == Constants.Settings) {
+      print('Settings');
+      showChooser();
+    } else if (choice == Constants.LogOut) {
+      _signOut();
+      print('Log out');
+    } else if (choice == Constants.About) {
+      Static.showAboutDialog(_context);
+      print('About');
+    }
+  }
+
+  void showChooser() {
+    showDialog<void>(
+        context: context,
+        builder: (context) {
+          return BrightnessSwitcherDialog(
+            onSelectedTheme: (brightness) {
+              DynamicTheme.of(context).setBrightness(brightness);
+            },
+          );
+        });
+  }
+
+  // void changeBrightness() {
+  //   DynamicTheme.of(context).setBrightness(
+  //       Theme.of(context).brightness == Brightness.dark
+  //           ? Brightness.light
+  //           : Brightness.dark);
+  // }
+
+  // void changeColor() {
+  //   DynamicTheme.of(context).setThemeData(ThemeData(
+  //       primaryColor: Theme.of(context).primaryColor == Colors.indigo
+  //           ? Colors.red
+  //           : Colors.indigo));
+  // }
+
+  void _signOut() async {
+    try {
+      await widget.auth.signOut();
+      Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+              builder: (context) => new LoginPage(
+                    auth: widget.auth,
+                    snackBarInfo:
+                        new SnackBarInfo('Logged out Successfully', 3, true),
+                  )));
+    } catch (e) {
+      Static.showSnackbar(
+          _context, new SnackBarInfo('Sign out error', 3, true));
+      print(e);
+    }
+  }
 }
-
-
-Future<String> _getStream() async {
-    FirebaseUser user = await FirebaseAuth.instance.currentUser();
-    String uid = user.uid;
-    var docReference = Firestore.instance.collection('users').document(uid);
-    return docReference.get().then((documentSnapshot) {
-      if (documentSnapshot.exists)
-        return documentSnapshot.data['email'];
-      else
-        return "Document for user $uid was not found.";
-    });
-    // var snapshots = Firestore.instance.collection('users').document(uid).collection('mainlist').snapshots();
-    // return snapshots;
-  }
-//   Widget _buildListItem(BuildContext context, DocumentSnapshot doc){
-//     return new ListTile(
-//       title: new Text(doc['title']),
-//       subtitle: new Text(doc['type']),
-//     );
-//   }
-// }
-
-
-  
-
-//   Future<String> getUID() async {
-//     FirebaseUser user = await FirebaseAuth.instance.currentUser();
-//     return user.uid;
-//   }
-
-// new StreamBuilder(
-//           stream: _getStream(),
-//           builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot){
-//             if (!snapshot.hasData) return new Center(child: new Container(child:CircularProgressIndicator()));
-//             return ListView.builder(
-//           itemExtent: 80.0,
-//           itemCount: snapshot.data.documents.length,
-//           itemBuilder: (context, index) => _buildListItem(context, snapshot.data.documents[index]),
-//         );
-//           }
-        
-

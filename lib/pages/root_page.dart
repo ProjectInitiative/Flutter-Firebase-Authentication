@@ -1,55 +1,71 @@
 import 'package:flutter/material.dart';
-import 'package:flutterfire_auth/pages/home.dart';
-import 'package:flutterfire_auth/pages/login_page.dart';
 import 'package:flutterfire_auth/utils/auth.dart';
 
+import 'home.dart';
+import 'login_page.dart';
 
 class RootPage extends StatefulWidget {
   RootPage({Key key, this.auth}) : super(key: key);
-  final BaseAuth auth;
+  final Auth auth;
 
   @override
   State<StatefulWidget> createState() => new _RootPageState();
 }
 
 enum AuthStatus {
+  notDetermined,
   notSignedIn,
   signedIn,
 }
 
 class _RootPageState extends State<RootPage> {
+  AuthStatus authStatus = AuthStatus.notDetermined;
 
-  AuthStatus authStatus = AuthStatus.notSignedIn;
-
-  initState() {
-    super.initState();
-    widget.auth.currentUser().then((userId) {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    widget.auth.currentUser().then((String userId) {
       setState(() {
-        authStatus = userId != null ? AuthStatus.signedIn : AuthStatus.notSignedIn;
+        authStatus =
+            userId == null ? AuthStatus.notSignedIn : AuthStatus.signedIn;
       });
     });
   }
 
-  void _updateAuthStatus(AuthStatus status) {
-    setState(() {
-      authStatus = status;
-    });
-  }
+  // initState() {
+  //   super.initState();
+  //   widget.auth.currentUser().then((userId) {
+  //     setState(() {
+  //       authStatus =
+  //           userId != null ? AuthStatus.signedIn : AuthStatus.notSignedIn;
+  //     });
+  //   });
+  // }
 
   @override
   Widget build(BuildContext context) {
     switch (authStatus) {
+      case AuthStatus.notDetermined:
+        return _buildWaitingScreen();
       case AuthStatus.notSignedIn:
         return new LoginPage(
-          title: 'Flutter Login',
           auth: widget.auth,
-          onSignIn: () => _updateAuthStatus(AuthStatus.signedIn),
         );
       case AuthStatus.signedIn:
         return new HomePage(
           auth: widget.auth,
-          onSignOut: () => _updateAuthStatus(AuthStatus.notSignedIn)
         );
+      default:
+        return _buildWaitingScreen();
     }
+  }
+
+  Widget _buildWaitingScreen() {
+    return Scaffold(
+      body: Container(
+        alignment: Alignment.center,
+        child: CircularProgressIndicator(),
+      ),
+    );
   }
 }
