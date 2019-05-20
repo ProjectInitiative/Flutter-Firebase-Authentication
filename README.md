@@ -1,5 +1,9 @@
 # FlutterFire Authentication
 
+
+>Released under the [MIT License](./LICENSE).
+>Copyright © 2019 Kyle Petryszak. All Rights Reserved.
+
 Base project code for integrating Firebase Authentication into a Flutter application.
 
 ![FlutterFirebaseAuthenticationPreview](./imgs/FlutterFirebaseAuthenticationPreview.gif)
